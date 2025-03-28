@@ -1,12 +1,30 @@
+apiVersion: tekton.dev/v1
 kind: Pipeline
-apiVersion: tekton.dev/v1beta1
 metadata:
-  name: example-pipeline
+  name: konflux demo tests
 spec:
+  description: >-
+    Expects a list of container images to be provided via the SNAPSHOT parameter.
   params:
-    - description: 'Snapshot of the application'
-      name: SNAPSHOT
-      default: '{"components": [{"name":"test-app", "containerImage": "quay.io/example/repo:latest"}]}'
+    - name: SNAPSHOT
+      description: A list of container images that should undergo testing
+      type: string
+    - name: GIT_URL
+      description: URL of the GIT repository that contains the tests.
+      default: "https://github.com/libhe/konfluxdemo"
+      type: string
+    - name: GIT_REF
+      default: "master"
+      description: Branch of the git repository used containing the tests
+      type: string
+    - name: DEBUG_OUTPUT
+      default: "0"
+      type: string
+    - name: WAIVE
+      default: "0"
+      type: string
+    - name: SKIP
+      default: "0"
       type: string
   tasks:
     - name: task-1
@@ -19,7 +37,7 @@ spec:
         - name: SNAPSHOT
         results:
         - name: TEST_OUTPUT
-          description: Test output
+          description: Test outpu
         steps:
         - image: registry.redhat.io/openshift4/ose-cli:latest
           env:
@@ -31,8 +49,3 @@ spec:
             # Run custom tests for the given Snapshot here
             # After the tests finish, record the overall result in the RESULT variable
             RESULT="SUCCESS"
-
-            # Output the standardized TEST_OUTPUT result in JSON form
-            TEST_OUTPUT=$(jq -rc --arg date $(date -u --iso-8601=seconds) --arg RESULT "${RESULT}" --null-input \
-              '{result: $RESULT, timestamp: $date, failures: 0, successes: 1, warnings: 0}')
-            echo -n "${TEST_OUTPUT}" | tee $(results.TEST_OUTPUT.path)
